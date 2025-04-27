@@ -1,0 +1,160 @@
+პრაქტიკული ნაწილი:
+გამოიყენეთ https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-s3-bucket.html და აღწერეთ S3 bucket, CloudFormation ის Template
+ში შემდეგი კონფიგურაციით:
+1. ბაკეტის სახელი: (X ქულა)
+უნდა იყოს უნიკალური და დინამიურად გენერირებული. გამოიყენეთ ფსევდო პარამეტრები (AWS::AccountId) და/ან შიდა ფუნქციები (Fn::Sub, Fn::Join)
+სახელის შესაქმნელად (მაგალითად: my-app-logs-${AWS::AccountId}).
+2. Versioning: (X ქულა)
+ბაკეტზე ჩართული უნდა იყოს ვერსიონირება (VersioningConfiguration).
+3. Access Control: (X ქულა)
+დააკონფიგურირეთ PublicAccessBlockConfiguration, პარამეტრის დინამიური ცვლადის გამოყენებით რათა stack ის ჩაშვებამდე შესაძლებელი იყოს ამ
+პარამეტრის ჩართვა ან გამორთვა.
+4. Tags: (X ქულა)
+დაამატეთ მინიმუმ ერთი თეგი ბაკეტს, მაგალითად: Project: MyWebApp. გამოიყენეთ პარამეტრები თეგების მნიშვნელობებისთვის.
+
+დარწმუნდით, რომ თქვენი შაბლონი ვალიდურია - aws cloudformation validate-template
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  S3 Bucket Template with dynamic name, versioning, public access block and tags.
+
+Parameters:
+  EnablePublicAccessBlock:
+    Type: String
+    AllowedValues:
+      - true
+      - false
+    Default: true
+    Description: >
+      Determines if PublicAccessBlockConfiguration should be enabled on the bucket.
+
+  ProjectName:
+    Type: String
+    Default: MyWebApp
+    Description: >
+      The project name to use in bucket tags.
+
+Resources:
+  MyS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: 
+        !Sub "my-app-logs-${AWS::AccountId}"
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: !Ref EnablePublicAccessBlock
+        BlockPublicPolicy: !Ref EnablePublicAccessBlock
+        IgnorePublicAcls: !Ref EnablePublicAccessBlock
+        RestrictPublicBuckets: !Ref EnablePublicAccessBlock
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+
+Outputs:
+  BucketName:
+    Description: "The name of the created S3 bucket."
+    Value: !Ref MyS3Bucket
+
+
+
+გამოიყენეთ https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-rds-dbinstance.html და აღწერეთ მონაცემთა ბაზის ინსტანსი:
+1. Parameters: (X ქულა)
+შაბლონს უნდა ჰქონდეს პარამეტრები:
+1. DBEngine - მონაცემთა ბაზის ძრავი მაგალითად (mysql, postgres). მიეცით საშუალება მომხმარებელს აირჩიოს სიიდან (AllowedValues).
+2. DBInstanceClass - default მნიშვნელობა db.t1.micro
+3. AllocatedStorage - default მნიშვნელობა 8 გიგაბაიტი.
+4. DBName - ბაზის სახელი.
+5. MasterUsername - მონაცემთა ბაზის ადმინისტრატორის მომხმარებლის სახელი.
+6. MasterUserPassword - ადმინისტრატორის პაროლი (გამოიყენეთ NoEcho: true პარამეტრის ატრიბუტი უსაფრთხოებისთვის).
+7. DBSubnetGroupName - არსებული DB Subnet Group-ის სახელი, რომელშიც უნდა გაეშვას ინსტანსი.
+8. VPCSecurityGroupIds - არსებული VPC უსაფრთხოების ჯგუფ(ებ)ის ID (სია, მძიმით გამოყოფილი ან List<AWS::EC2::SecurityGroup::Id> ტიპის).
+2. RDS DB ინსტანსის კონფიგურაცია (AWS::RDS::DBInstance): (X ქულა)
+1. ძრავი და კლასი: გამოიყენეთ ზემოთ განსაზღვრული პარამეტრები (DBEngine, DBInstanceClass).
+2. გამოიყენეთ AllocatedStorage პარამეტრი.
+3. გამოიყენეთ DBName პარამეტრი.
+4. გამოიყენეთ MasterUsername და MasterUserPassword პარამეტრები.
+5. გამოიყენეთ DBSubnetGroupName და VPCSecurityGroupIds პარამეტრები.
+
+
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  CloudFormation Template for creating an RDS DB Instance with customizable parameters.
+
+Parameters:
+  DBEngine:
+    Type: String
+    Description: "Select the database engine."
+    AllowedValues:
+      - mysql
+      - postgres
+    Default: mysql
+
+  DBInstanceClass:
+    Type: String
+    Description: "Database instance class."
+    Default: db.t1.micro
+
+  AllocatedStorage:
+    Type: Number
+    Description: "Allocated storage in GB."
+    Default: 8
+    MinValue: 5
+    MaxValue: 6144
+
+  DBName:
+    Type: String
+    Description: "The name of the database to create."
+
+  MasterUsername:
+    Type: String
+    Description: "The master username for the database."
+
+  MasterUserPassword:
+    Type: String
+    Description: "The master password for the database."
+    NoEcho: true
+
+  DBSubnetGroupName:
+    Type: String
+    Description: "The name of an existing DB subnet group."
+
+  VPCSecurityGroupIds:
+    Type: List<AWS::EC2::SecurityGroup::Id>
+    Description: "List of VPC security group IDs."
+
+Resources:
+  MyDBInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      Engine: !Ref DBEngine
+      DBInstanceClass: !Ref DBInstanceClass
+      AllocatedStorage: !Ref AllocatedStorage
+      DBName: !Ref DBName
+      MasterUsername: !Ref MasterUsername
+      MasterUserPassword: !Ref MasterUserPassword
+      DBSubnetGroupName: !Ref DBSubnetGroupName
+      VPCSecurityGroupIds: !Ref VPCSecurityGroupIds
+      PubliclyAccessible: false
+      BackupRetentionPeriod: 7
+      DeletionProtection: true
+
+Outputs:
+  DBInstanceEndpoint:
+    Description: "The database endpoint address."
+    Value: !GetAtt MyDBInstance.Endpoint.Address
+  DBInstanceId:
+    Description: "The database instance ID."
+    Value: !Ref MyDBInstance
+
+
+
+
+
+
+
+
+
+
+
+
+
